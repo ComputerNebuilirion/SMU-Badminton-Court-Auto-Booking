@@ -30,18 +30,18 @@ def run_job():
 def start_countdown():
     data = load_cfg()
     target_dt = datetime.strptime(data['_target_iso'][:10], '%Y-%m-%d')
-    run_time = target_dt.replace(hour=23, minute=59, second=55)
+    run_time = target_dt.replace(hour=23, minute=59, second=30)
     now = datetime.now()
     delta = (run_time - now).total_seconds()
 
     # 已过点立即执行
     if delta <= 0:
-        log('已到达或错过 23:59:55，立即执行')
+        log('已到达或错过 23:59:30，立即执行')
         run_job()
         return
 
     # 注册每天 23:59:55 任务
-    schedule.every().day.at("23:59:55").do(run_job)
+    schedule.every().day.at("23:59:30").do(run_job)
     log(f'后台倒计时已启动，将于 {run_time} 抢场')
     while True:
         schedule.run_pending()
