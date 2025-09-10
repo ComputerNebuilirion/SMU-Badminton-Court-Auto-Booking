@@ -54,11 +54,11 @@ pyinstaller booking_daemon.spec         # 后台守护
 | main.py | 	图形界面 + 取消定时逻辑| 
 | booking_daemon.py | 	后台计时，到点唤醒主程序抢场| 
 | SMUBadmintonAutoBook.py | 	核心业务函数（登录/选场/提交）| 
-| main.spec / daemon.spec | 	PyInstaller 打包配置（已含无窗口、路径等）| 
+| main.spec / booking_daemon.spec | 	PyInstaller 打包配置（已含无窗口、路径等）| 
 
 ## ⚠️ 注意事项
 
-首次运行需联网，让 Selenium Manager 自动下载对应 chromedriver；后续断网也能用
+首次运行需联网，让 Selenium Manager 自动下载对应 chromedriver
 
 定时抢场前请保持电脑不休眠（或设置 Wake-On-LAN / 计划任务）
 
