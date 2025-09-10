@@ -1,0 +1,1 @@
+若出现报错提示"Unable to obtain driver for chrome",请运行chrometest.exe下载驱动,等待程序出现"按回车键退出"字样后即可运行抢场程序。

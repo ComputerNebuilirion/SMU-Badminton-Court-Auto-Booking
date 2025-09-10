@@ -1,0 +1,6 @@
+2025-09-10 11:05:53.149867 崩溃：
+Traceback (most recent call last):
+  File "booking_daemon.py", line 42, in main
+  File "booking_daemon.py", line 27, in start_countdown
+AttributeError: module 'datetime' has no attribute 'strptime'
+
