@@ -12,6 +12,11 @@ isBooking = False  # 全局变量，防止重复点击
 
 KEY_FILE = '.key'
 CFG_FILE = 'user_profile.json'
+LOG = 'booking.log'
+
+def log(msg):
+    with open(LOG, 'a', encoding='utf-8') as f:
+        f.write(f'{datetime.now():%Y-%m-%d %H:%M:%S}  {msg}\n')
 
 def _get_key():
         """简易本地密钥：没有就生成一个"""
@@ -243,15 +248,18 @@ class BadmintonFrame(wx.Frame):
             isBooking = False
 
 if __name__ == "__main__":
+    
     if len(sys.argv) > 1 and sys.argv[1] == '--auto':
         try:
             with open('booking_cfg.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
             data["isBook"] = "Yes"
+            data.pop('_target_iso', None)
+            subprocess.run('taskkill /F /IM booking_daemon.exe', shell=True)
             auto_book(**data)
         except Exception as e:
             # 可以把异常写日志，这里简单 print
-            print('后台抢场失败：', e)
+            log(f'后台抢场失败：{e}')
         sys.exit(0) # 结束后台进程
     app = wx.App(False)
     BadmintonFrame().Show()
