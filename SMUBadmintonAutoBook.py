@@ -71,7 +71,7 @@ def auto_book(user, pwd, name, tele_num, date, court_num, time_slot, isBook=Fals
     
     while isBook:
         target_dt = datetime.strptime(cal_target_date("今天").isoformat[:10], '%Y-%m-%d')
-        run_time = target_dt.replace(hour=23, minute=59, second=55)
+        run_time = target_dt.replace(hour=23, minute=59, second=59)
         delta = (run_time - datetime.now()).total_seconds()
         if delta < 0:
             break
