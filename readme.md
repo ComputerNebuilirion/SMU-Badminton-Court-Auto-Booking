@@ -71,3 +71,4 @@ pyinstaller booking_daemon.spec         # 后台守护
 MIT © 2025 CompNebula
 Fork & Star 欢迎贡献！
 
+若有问题可通过2052361@qq.com联系开发者，如果是报错请附上程序输出的日志；如果是功能上的问题麻烦请尽量详细描述。
