@@ -117,7 +117,7 @@ class BadmintonFrame(wx.Frame):
             "court_num": self.court_num.GetValue(),
             "time_slot": self.time_slot.GetString(self.time_slot.GetSelection()),
             "tele_num": self.user.GetValue().strip(),
-            "isBook": False
+            "isBook": "No"
         }
 
     def on_run(self, e):
@@ -172,7 +172,7 @@ if __name__ == "__main__":
         try:
             with open('booking_cfg.json', 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            data["isBook"] = True
+            data["isBook"] = "Yes"
             auto_book(**data)
         except Exception as e:
             # 可以把异常写日志，这里简单 print
