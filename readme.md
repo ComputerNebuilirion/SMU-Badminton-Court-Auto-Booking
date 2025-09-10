@@ -21,9 +21,10 @@ Made by CompNebula
 
 1. 安装官方 Chrome（任意稳定版）  
 2. 解压 release 压缩包 → 得到两个文件：
+```
 SMUBooker.exe          # 主程序
 booking_daemon.exe     # 后台计时器
-复制
+```
 3. 双击 `SMUBooker.exe`  
 - 填账号/密码/姓名 → 选场地、时段  
 - 若选「大后天」→ 点「确定」→ 提示「计时已在后台运行」→ 主界面可关闭  
