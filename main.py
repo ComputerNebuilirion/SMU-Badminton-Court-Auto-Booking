@@ -5,12 +5,36 @@ from SMUBadmintonAutoBook import cal_target_date
 import threading
 from datetime import datetime, timedelta
 import time, json, subprocess, os, sys
+import base64, os, json
+from cryptography.fernet import Fernet
 
 isBooking = False  # 全局变量，防止重复点击
+
+KEY_FILE = '.key'
+CFG_FILE = 'user_profile.json'
+
+def _get_key():
+        """简易本地密钥：没有就生成一个"""
+        if os.path.exists(KEY_FILE):
+            with open(KEY_FILE, 'rb') as f:
+                return f.read()
+        key = Fernet.generate_key()
+        with open(KEY_FILE, 'wb') as f:
+            f.write(key)
+        return key
+
+_cipher = Fernet(_get_key())
+
+def encrypt(txt: str) -> str:
+    return _cipher.encrypt(txt.encode()).decode()
+
+def decrypt(txt: str) -> str:
+    return _cipher.decrypt(txt.encode()).decode()
 
 class BadmintonFrame(wx.Frame):
     def __init__(self):
         super().__init__(None, title="SMU 羽毛球自动预约 by CompNebula", size=(540, 720))
+        
         panel = wx.Panel(self)
         vbox = wx.BoxSizer(wx.VERTICAL)
         # 信息
@@ -26,6 +50,17 @@ class BadmintonFrame(wx.Frame):
         vbox.Add(wx.StaticText(panel, label="密码"), flag=wx.TOP | wx.LEFT, border=10)
         self.pwd = wx.TextCtrl(panel, style=wx.TE_PASSWORD)
         vbox.Add(self.pwd, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=10)
+
+        # 记住我 & 清除账号
+        self.remember_chk = wx.CheckBox(panel, label="记住账号密码")
+        self.clear_btn   = wx.Button(panel, label="清除保存")
+        remember_box = wx.BoxSizer(wx.HORIZONTAL)
+        remember_box.Add(self.remember_chk, 0, wx.ALL, 5)
+        remember_box.Add(self.clear_btn,   0, wx.ALL, 5)
+        vbox.Add(remember_box, 0, wx.LEFT, 10)
+
+        # 事件绑定
+        self.clear_btn.Bind(wx.EVT_BUTTON, self.on_clear_save)
 
         # 姓名
         vbox.Add(wx.StaticText(panel, label="姓名"), flag=wx.TOP | wx.LEFT, border=10)
@@ -76,8 +111,41 @@ class BadmintonFrame(wx.Frame):
 
         panel.SetSizer(vbox)
 
+        # 自动填充
+        saved_user, saved_pwd = self.load_profile()
+        if saved_user:
+            self.user.SetValue(saved_user)
+            self.pwd.SetValue(saved_pwd)
+            self.remember_chk.SetValue(True)
+
     def on_test(self, e):
         wx.MessageBox(f"后台存在：{self._is_daemon_running()}", "调试")
+
+    # ------ 存/取 ------
+    def save_profile(self, user: str, pwd: str):
+        data = {'user': encrypt(user), 'pwd': encrypt(pwd)}
+        with open(CFG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f)
+
+    def load_profile(self) -> tuple[str, str]:
+        if not os.path.exists(CFG_FILE):
+            return '', ''
+        with open(CFG_FILE, 'r', encoding='utf-8') as f:
+            d = json.load(f)
+        return decrypt(d['user']), decrypt(d['pwd'])
+
+    def clear_profile(self):
+        for f in [CFG_FILE, KEY_FILE]:
+            if os.path.exists(f):
+                os.remove(f)
+
+    def on_clear_save(self, e):
+        self.clear_profile()
+        self.user.SetValue('')
+        self.pwd.SetValue('')
+        self.remember_chk.SetValue(False)
+        wx.MessageBox("已清除本地保存的账号密码", "提示", wx.OK | wx.ICON_INFORMATION)
+
 
     def _is_daemon_running(self):
         try:
@@ -130,6 +198,13 @@ class BadmintonFrame(wx.Frame):
         if not all(data.values()):
             wx.MessageBox("请填写完整信息", "提示", wx.OK | wx.ICON_WARNING)
             return
+        try:
+            if self.remember_chk.IsChecked():
+                self.save_profile(data['user'], data['pwd'])
+            else:
+                self.clear_profile()   # 立即清除
+        except Exception as e:
+            wx.CallAfter(self.log.AppendText, f"[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] 预约失败：{e}\n")
         # 后台线程跑脚本，避免界面卡死
         self.log.AppendText(f"[{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}] 开始预约...\n")
         threading.Thread(target=self._run_booking, args=(data,), daemon=True).start()
