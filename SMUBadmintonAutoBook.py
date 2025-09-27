@@ -32,7 +32,7 @@ def cal_target_date(date_str):
     else:
         raise ValueError("日期输入错误！")
 
-def auto_book(user, pwd, name, tele_num, date, court_num, time_slot, isBook=False):
+def auto_book(user, pwd, name, tele_num, date, court_num, time_slot, stop_at_main=False, **kw):
     """自动抢场函数 \n
     user: 账号名 \n
     pwd: 密码 \n
@@ -41,7 +41,6 @@ def auto_book(user, pwd, name, tele_num, date, court_num, time_slot, isBook=Fals
     date: 预订日期，可填"今天"、"明天"、"后天"、"大后天"。若选择"今天"、"明天"、"后天"，则立即进行抢场；若选择"大后天"，则会定时设置今晚十二点自动抢场 \n
     court_num: 预订场地号，可填1-7的数字(建议4-7) \n
     time_slot: 预订时间段，可填"17:30-19:30"或"19:30-21:30" \n
-    isBook: 是否是提前定时预约 \n
     """
     opt = Options()
     opt.add_argument('--allow-running-insecure-content')
@@ -68,14 +67,10 @@ def auto_book(user, pwd, name, tele_num, date, court_num, time_slot, isBook=Fals
     except:
         driver.quit()
         raise Exception("登录失败：账号或密码错误，或页面未正常跳转")
-    
-    while isBook == "Yes":
-        target_dt = datetime.strptime(cal_target_date("今天").isoformat[:10], '%Y-%m-%d')
-        run_time = target_dt.replace(hour=23, minute=59, second=59)
-        delta = (run_time - datetime.now()).total_seconds()
-        if delta < 0:
-            break
-        time.sleep(1)
+
+    if stop_at_main:
+        log('已登录并停在主界面，等待 00:00:00 抢场')
+        return          # ← 不继续选日期，不 driver.quit()
 
     
     try:

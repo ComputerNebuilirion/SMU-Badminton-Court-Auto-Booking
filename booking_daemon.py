@@ -22,27 +22,44 @@ def load_cfg():
     with open(CFG, 'r', encoding='utf-8') as f:
         return json.load(f)
 
+RUN_ONCE = True          # 只抢一次
+finished = False         # 是否已执行
+
+def run_login():
+    """23:59:30 仅登录并停在主界面"""
+    data = load_cfg()
+    data['stop_at_main'] = True
+    subprocess.Popen([os.path.abspath('SMUBooker.exe'), '--login-only'])
+    log('23:59:30 已启动登录，停在主界面')
+
 def run_job():
-    log('时间到，启动主程序抢场...')
+    """00:00:00 真正抢场"""
+    data = load_cfg()
+    data.pop('stop_at_main', None)   # 去掉标志
     subprocess.Popen([os.path.abspath('SMUBooker.exe'), '--auto'])
+    global finished
     finished = True
 
 def start_countdown():
-    data = load_cfg()
-    target_dt = datetime.strptime(data['_target_iso'][:10], '%Y-%m-%d')
-    run_time = target_dt.replace(hour=23, minute=59, second=30)
-    now = datetime.now()
-    delta = (run_time - now).total_seconds()
+    today = datetime.now().date()
+    login_time = datetime.combine(today, datetime.min.time()).replace(hour=23, minute=59, second=30)
+    job_time   = datetime.combine(today, datetime.min.time()).replace(hour=0, minute=0, second=0)
 
-    # 已过点立即执行
-    if delta <= 0:
-        log('已到达或错过 23:59:30，立即执行')
+    now = datetime.now()
+
+    # 1. 23:59:30 提前登录
+    if now >= login_time:
+        run_login()
+    else:
+        schedule.every().day.at("23:59:30").do(run_login)
+
+    # 2. 00:00:00 准点抢场
+    if now >= job_time:
         run_job()
         return
+    else:
+        schedule.every().day.at("00:00:00").do(run_job)
 
-    # 注册每天 23:59:55 任务
-    schedule.every().day.at("23:59:30").do(run_job)
-    log(f'后台倒计时已启动，将于 {run_time} 抢场')
     while True:
         schedule.run_pending()
         if finished:

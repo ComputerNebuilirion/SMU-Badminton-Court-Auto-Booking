@@ -248,19 +248,20 @@ class BadmintonFrame(wx.Frame):
             isBooking = False
 
 if __name__ == "__main__":
-    
-    if len(sys.argv) > 1 and sys.argv[1] == '--auto':
-        try:
-            with open('booking_cfg.json', 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            data["isBook"] = "Yes"
-            data.pop('_target_iso', None)
-            subprocess.run('taskkill /F /IM booking_daemon.exe', shell=True)
-            auto_book(**data)
-        except Exception as e:
-            # 可以把异常写日志，这里简单 print
-            log(f'后台抢场失败：{e}')
-        sys.exit(0) # 结束后台进程
+    if len(sys.argv) > 1:
+        cmd = sys.argv[1]
+        data = json.load(open('booking_cfg.json', encoding='utf-8'))
+        if cmd == '--login-only':
+            data['stop_at_main'] = True
+            auto_book(**data)          # 只登录，不退出
+            input("已登录并停在主界面，按任意键退出...")  #
+            sys.exit(0)
+        elif cmd == '--auto':
+            data.pop('stop_at_main', None)
+            auto_book(**data)          # 真正抢场
+            sys.exit(0)
+
+    # 正常图形界面
     app = wx.App(False)
     BadmintonFrame().Show()
     app.MainLoop()
