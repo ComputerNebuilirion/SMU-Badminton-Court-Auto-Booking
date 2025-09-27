@@ -45,24 +45,42 @@ class BadmintonFrame(wx.Frame):
         # 信息
         vbox.Add(wx.StaticText(panel, label="欢迎使用SMU 羽毛球自动预约程序！"), flag=wx.TOP | wx.LEFT, border=10)
         vbox.Add(wx.StaticText(panel, label="本程序依赖chrome（谷歌浏览器）运行，如果没有，请前往官网/镜像网站下载"), flag=wx.TOP | wx.LEFT, border=10)
-        vbox.Add(wx.StaticText(panel, label=f"今天日期：{today_get()}\n"), flag=wx.TOP | wx.LEFT, border=10)
+        
+        # 用self.date_label保存日期控件
+        self.date_label = wx.StaticText(panel, label=f"今天日期：{today_get()}\n")
+        vbox.Add(self.date_label, flag=wx.TOP | wx.LEFT, border=10)
         # 账户
         vbox.Add(wx.StaticText(panel, label="账户"), flag=wx.TOP | wx.LEFT, border=10)
-        self.user = wx.TextCtrl(panel)
-        vbox.Add(self.user, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=10)
-
-        # 密码
-        vbox.Add(wx.StaticText(panel, label="密码"), flag=wx.TOP | wx.LEFT, border=10)
+        self.user_choice = wx.ComboBox(panel, style=wx.CB_DROPDOWN)
+        vbox.Add(self.user_choice, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=10)
         self.pwd = wx.TextCtrl(panel, style=wx.TE_PASSWORD)
+        vbox.Add(wx.StaticText(panel, label="密码"), flag=wx.TOP | wx.LEFT, border=10)
         vbox.Add(self.pwd, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=10)
 
-        # 记住我 & 清除账号
+        # 记住我 & 清除账号（提前到这里！）
         self.remember_chk = wx.CheckBox(panel, label="记住账号密码")
         self.clear_btn   = wx.Button(panel, label="清除保存")
         remember_box = wx.BoxSizer(wx.HORIZONTAL)
         remember_box.Add(self.remember_chk, 0, wx.ALL, 5)
         remember_box.Add(self.clear_btn,   0, wx.ALL, 5)
         vbox.Add(remember_box, 0, wx.LEFT, 10)
+
+        # 自动填充账号列表
+        profiles = self.load_profiles()
+        self.user_choice.Set([u for u, _ in profiles])
+        if profiles:
+            self.user_choice.SetValue(profiles[0][0])
+            self.pwd.SetValue(profiles[0][1])
+            self.remember_chk.SetValue(True)
+
+        # 选择账号时自动填充密码
+        def on_user_choice(evt):
+            user = self.user_choice.GetValue()
+            for u, p in self.load_profiles():
+                if u == user:
+                    self.pwd.SetValue(p)
+                    break
+        self.user_choice.Bind(wx.EVT_COMBOBOX, on_user_choice)
 
         # 事件绑定
         self.clear_btn.Bind(wx.EVT_BUTTON, self.on_clear_save)
@@ -75,8 +93,12 @@ class BadmintonFrame(wx.Frame):
         # 日期
         vbox.Add(wx.StaticText(panel, label="日期"), flag=wx.TOP | wx.LEFT, border=10)
         vbox.Add(wx.StaticText(panel, label="说明：若选择大后天，则自动设置定时今晚零点准时启动；若选择其它，则立即抢场"), flag=wx.TOP | wx.LEFT, border=10)
-        vbox.Add(wx.StaticText(panel, label=f"今天：{cal_target_date("今天").strftime("%m月%d日")} 明天：{cal_target_date("明天").strftime("%m月%d日")} \n后天：{cal_target_date("后天").strftime("%m月%d日")} 大后天：{cal_target_date("大后天").strftime("%m月%d日")}"), flag=wx.TOP | wx.LEFT, border=10)
-        self.date = wx.Choice(panel, choices=["今天", "明天", "后天", "大后天"])
+        # 用self.date_info_label保存四个日期的控件
+        self.date_info_label = wx.StaticText(panel, label="")
+        vbox.Add(self.date_info_label, flag=wx.TOP | wx.LEFT, border=10)
+        self.refresh_date_label()  # 初始化时刷新一次
+
+        self.date = wx.Choice(panel, choices=["今天", "明天", "后天", "大后天（不可用）"])
         self.date.SetSelection(1)  # 默认明天
         vbox.Add(self.date, flag=wx.EXPAND | wx.LEFT | wx.RIGHT, border=10)
 
@@ -119,25 +141,75 @@ class BadmintonFrame(wx.Frame):
         # 自动填充
         saved_user, saved_pwd = self.load_profile()
         if saved_user:
-            self.user.SetValue(saved_user)
+            self.user_choice.SetValue(saved_user)
             self.pwd.SetValue(saved_pwd)
             self.remember_chk.SetValue(True)
+
+        # 定时刷新日期
+        self.timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.on_timer, self.timer)
+        self.timer.Start(1000)
+
+        # 初始化时也刷新一次
+        self.refresh_date_label()
+
+    def refresh_date_label(self):
+        self.date_label.SetLabel(f"今天日期：{today_get()}\n")
+        # 同步刷新四个日期
+        self.date_info_label.SetLabel(
+            f"今天：{cal_target_date('今天').strftime('%m月%d日')} "
+            f"明天：{cal_target_date('明天').strftime('%m月%d日')} \n"
+            f"后天：{cal_target_date('后天').strftime('%m月%d日')} "
+            f"大后天：{cal_target_date('大后天').strftime('%m月%d日')}"
+        )
+
+    def on_timer(self, event):
+        self.refresh_date_label()
 
     def on_test(self, e):
         wx.MessageBox(f"后台存在：{self._is_daemon_running()}", "调试")
 
     # ------ 存/取 ------
     def save_profile(self, user: str, pwd: str):
-        data = {'user': encrypt(user), 'pwd': encrypt(pwd)}
+        # 读取已有账号列表
+        profiles = []
+        if os.path.exists(CFG_FILE):
+            with open(CFG_FILE, 'r', encoding='utf-8') as f:
+                try:
+                    profiles = json.load(f)
+                except Exception:
+                    profiles = []
+        # 检查是否已存在，存在则更新密码，否则追加
+        for acc in profiles:
+            if decrypt(acc['user']) == user:
+                acc['pwd'] = encrypt(pwd)
+                break
+        else:
+            profiles.append({'user': encrypt(user), 'pwd': encrypt(pwd)})
         with open(CFG_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f)
+            json.dump(profiles, f, ensure_ascii=False, indent=2)
 
     def load_profile(self) -> tuple[str, str]:
         if not os.path.exists(CFG_FILE):
             return '', ''
         with open(CFG_FILE, 'r', encoding='utf-8') as f:
-            d = json.load(f)
-        return decrypt(d['user']), decrypt(d['pwd'])
+            profiles = json.load(f)
+        if isinstance(profiles, list) and profiles:
+            return decrypt(profiles[0]['user']), decrypt(profiles[0]['pwd'])
+        return '', ''
+
+    def load_profiles(self):
+        if not os.path.exists(CFG_FILE):
+            return []
+        with open(CFG_FILE, 'r', encoding='utf-8') as f:
+            try:
+                profiles = json.load(f)
+                return [
+                    (decrypt(acc['user']), decrypt(acc['pwd']))
+                    for acc in profiles
+                ]
+            except Exception:
+                return []
 
     def clear_profile(self):
         for f in [CFG_FILE, KEY_FILE]:
@@ -146,7 +218,7 @@ class BadmintonFrame(wx.Frame):
 
     def on_clear_save(self, e):
         self.clear_profile()
-        self.user.SetValue('')
+        self.user_choice.SetValue('')
         self.pwd.SetValue('')
         self.remember_chk.SetValue(False)
         wx.MessageBox("已清除本地保存的账号密码", "提示", wx.OK | wx.ICON_INFORMATION)
@@ -183,14 +255,13 @@ class BadmintonFrame(wx.Frame):
 
     def _collect_data(self):
         return {
-            "user": self.user.GetValue().strip(),
+            "user": self.user_choice.GetValue().strip(),
             "pwd": self.pwd.GetValue().strip(),
             "name": self.name.GetValue().strip(),
             "date": self.date.GetString(self.date.GetSelection()),
             "court_num": self.court_num.GetValue(),
             "time_slot": self.time_slot.GetString(self.time_slot.GetSelection()),
-            "tele_num": self.user.GetValue().strip(),
-            "isBook": "No"
+            "tele_num": self.user_choice.GetValue().strip(),
         }
 
     def on_run(self, e):
