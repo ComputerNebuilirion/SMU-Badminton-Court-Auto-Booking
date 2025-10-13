@@ -3,6 +3,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
 import time, json
 from datetime import datetime, timedelta
 
@@ -45,8 +46,9 @@ def auto_book(user, pwd, name, tele_num, date, court_num, time_slot, stop_at_mai
     opt = Options()
     opt.add_argument('--allow-running-insecure-content')
     opt.add_argument('--disable-web-security')
+    Service_obj = Service('./chromedriver.exe')
     opt.set_capability("goog:loggingPrefs", {"browser": "ALL"})
-    driver = webdriver.Chrome(options=opt)
+    driver = webdriver.Chrome(options=opt, service=Service_obj)
     driver.get(url)
 
     #login

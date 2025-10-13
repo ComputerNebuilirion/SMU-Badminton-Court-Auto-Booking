@@ -59,13 +59,11 @@ pyinstaller booking_daemon.spec         # 后台守护
 
 ## ⚠️ 注意事项
 
-首次运行需联网，让 Selenium Manager 自动下载对应 chromedriver
+定时抢场前请保持电脑不休眠（或设置 Wake-On-LAN / 计划任务）（现不可用）
 
-定时抢场前请保持电脑不休眠（或设置 Wake-On-LAN / 计划任务）
+若出现报错提示"Unable to obtain driver for chrome",请按照主界面的指示点击修复按钮，等待程序自动下载符合谷歌浏览器版本的驱动程序，然后即可再次运行
 
-若 Chrome 自动升级大版本，再次联网即可自动更新驱动
-
-若出现报错提示"Unable to obtain driver for chrome",请运行chrometest.exe下载驱动,等待程序出现"按回车键退出"字样后即可运行抢场程序。
+若 Chrome 自动升级大版本，也是点击修复按钮进行更新驱动程序
 
 📄 License
 MIT © 2025 CompNebula

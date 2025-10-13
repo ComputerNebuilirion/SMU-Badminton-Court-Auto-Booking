@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import time, json, subprocess, os, sys
 import base64, os, json
 from cryptography.fernet import Fernet
+from check_driver_gui import CheckDriverFrame
 
 isBooking = False  # 全局变量，防止重复点击
 
@@ -38,16 +39,24 @@ def decrypt(txt: str) -> str:
 
 class BadmintonFrame(wx.Frame):
     def __init__(self):
-        super().__init__(None, title="SMU 羽毛球自动预约 by CompNebula", size=(540, 720))
+        super().__init__(None, title="SMU 羽毛球自动预约 by CompNebula", size=(600, 800))
         
         panel = wx.Panel(self)
         vbox = wx.BoxSizer(wx.VERTICAL)
         # 信息
         vbox.Add(wx.StaticText(panel, label="欢迎使用SMU 羽毛球自动预约程序！"), flag=wx.TOP | wx.LEFT, border=10)
         vbox.Add(wx.StaticText(panel, label="本程序依赖chrome（谷歌浏览器）运行，如果没有，请前往官网/镜像网站下载"), flag=wx.TOP | wx.LEFT, border=10)
+
+        #修复chromedriver
+        vbox.Add(wx.StaticText(panel, label="本程序依赖chromedriver.exe运行，如果出现报错\"Unable to obtain driver for chrome\"，"),flag=wx.TOP | wx.LEFT, border=10)
+        vbox.Add(wx.StaticText(panel, label="请点击下方按钮修复"),
+                        flag=wx.TOP | wx.LEFT, border=10)
+        fix_btn = wx.Button(panel, label="点击修复")
+        fix_btn.Bind(wx.EVT_BUTTON, self.on_fix_driver)
+        vbox.Add(fix_btn, flag=wx.LEFT, border=10)
         
         # 用self.date_label保存日期控件
-        self.date_label = wx.StaticText(panel, label=f"今天日期：{today_get()}\n")
+        self.date_label = wx.StaticText(panel, label=f"今天日期：{today_get()}")
         vbox.Add(self.date_label, flag=wx.TOP | wx.LEFT, border=10)
         # 账户
         vbox.Add(wx.StaticText(panel, label="账户"), flag=wx.TOP | wx.LEFT, border=10)
@@ -152,6 +161,11 @@ class BadmintonFrame(wx.Frame):
 
         # 初始化时也刷新一次
         self.refresh_date_label()
+
+    def on_fix_driver(self, event):
+        # 独立窗口跑下载逻辑，不阻塞主界面
+        frame = CheckDriverFrame(self)   # 把 self 传进去当 parent，这样窗口会居中主界面
+        frame.Show()
 
     def refresh_date_label(self):
         self.date_label.SetLabel(f"今天日期：{today_get()}\n")
