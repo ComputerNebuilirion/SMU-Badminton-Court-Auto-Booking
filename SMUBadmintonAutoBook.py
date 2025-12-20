@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 name = "张浩宇"
 user = "17820663835"
-pwd = "Apple755"
+pwd = ""
 url = "http://campus.hongdekejiwuye.com/?propertycode=30001"
 
 def today_get():
@@ -59,7 +59,20 @@ def auto_book(user, pwd, name, tele_num, date, court_num, time_slot, stop_at_mai
     driver.execute_script("arguments[0].style.border='3px solid red'", login_btn)  # 高亮
     login_btn.click()
 
-    # go into booking page
+    #go into booking page
+    try:
+        booking_btn = WebDriverWait(driver, 3).until(
+            EC.element_to_be_clickable(
+                (By.XPATH, "//uni-view[uni-text/span[text()='场地预约']]")
+            )
+        )
+        driver.execute_script("arguments[0].style.border='3px solid red'", booking_btn)
+        booking_btn.click()
+    except Exception as e:
+        driver.quit()
+        raise Exception("无法进入预约页面") from e
+
+    # go into booking badminton page
     try:
         badminton_btn = WebDriverWait(driver, 3).until(
             EC.element_to_be_clickable(
